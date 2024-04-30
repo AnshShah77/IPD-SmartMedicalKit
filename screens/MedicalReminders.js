@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Platform,
   Button,
+  Alert,
 } from 'react-native';
 import { ArrowLeftIcon } from "react-native-heroicons/solid";
 import { useNavigation } from '@react-navigation/native';
@@ -17,7 +17,8 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Plus from '../components/Plus';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
-import { firestore, firebase } from "../config"; 
+import { firestore, firebase } from "../config";
+import axios from 'axios';
 
 LocaleConfig.locales['en'] = {
   monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -40,6 +41,7 @@ export default function MedicalReminders() {
   const [submittedData, setSubmittedData] = useState([]);
   const [alarmSound, setAlarmSound] = useState(null);
   const [editingReminder, setEditingReminder] = useState(null);
+  const [alarmTime, setAlarmTime] = useState('');
 
   useEffect(() => {
     // Fetch reminder data from Firebase based on selectedDate
@@ -61,7 +63,7 @@ export default function MedicalReminders() {
   };
 
   useEffect(() => {
-    const requestPermission = async() => {
+    const requestPermission = async () => {
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
         await Notifications.requestPermissionsAsync();
@@ -75,10 +77,10 @@ export default function MedicalReminders() {
     const interval = setInterval(() => {
       checkTime();
     }, 1000);
-  
+
     return () => clearInterval(interval);
   }, [selectedTime]);
-  
+
   const checkTime = () => {
     if (selectedTime) {
       const currentDateTime = new Date();
@@ -94,7 +96,7 @@ export default function MedicalReminders() {
       }
     }
   };
-  
+
   const onDayPress = (day) => {
     setSelectedDate(day.dateString);
   };
@@ -157,9 +159,12 @@ export default function MedicalReminders() {
       );
       await sound.playAsync();
       setAlarmSound(sound);
-      
+
       const notificationId = await scheduleNotification();
       console.log('Notification scheduled with id:', notificationId);
+
+      // Send selected alarm time to ESP32
+      sendAlarmToESP32();
     } catch (error) {
       console.error('Error playing alarm sound:', error);
     }
@@ -171,19 +176,19 @@ export default function MedicalReminders() {
         title: 'Alarm',
         body: 'Time to wake up',
       };
-  
+
       const schedulingOptions = {
         content: notificationContent,
-        trigger: null, 
+        trigger: null,
       };
-  
+
       const notificationId = await Notifications.scheduleNotificationAsync(schedulingOptions);
       return notificationId;
     } catch (error) {
       console.error('Error scheduling notification:', error);
     }
   };
-  
+
   const dismissAlarm = async () => {
     try {
       if(alarmSound) {
@@ -216,39 +221,23 @@ export default function MedicalReminders() {
 
       setSubmittedData((prevData) => {
         const existingDataIndex = prevData.findIndex((item) => item.date === calendarDate);
-  
+
         if (existingDataIndex !== -1) {
           const newData = [...prevData];
           newData[existingDataIndex].reminders.push(newReminder);
-  
+
           return newData;
         } else {
           return [...prevData, { date: calendarDate, reminders: [newReminder] }];
         }
       });
-  
+
       setShowPopup(false);
-      console.log("Reminder added successfully!!")
+      console.log("Reminder added successfully!!");
     } catch (error) {
       console.error("Error adding reminder: ", error);
     }
   };
-
-//   const handleEditReminder = (reminder) => {
-//     setEditingReminder(reminder);
-//     setReminderData(reminder.reminder);
-//     setNotesData(reminder.notes);
-  
-//     const timeParts = reminder.time.split(':');
-//     const selectedTime = new Date();
-//     selectedTime.setHours(parseInt(timeParts[0], 10));
-//     selectedTime.setMinutes(parseInt(timeParts[1], 10));
-  
-//     setSelectedTime(selectedTime);
-//     setDatePickerVisible(true);
-//     setShowPopup(true);
-// };
-
 
   const handleDeleteReminder = async (reminder) => {
     try {
@@ -261,39 +250,27 @@ export default function MedicalReminders() {
     }
   };
 
-  // const handleUpdateReminder = async () => {
-  //   try {
-  //     const remindersRef = firestore.collection("reminders");
-  //     const updatedReminder = {
-  //       date: calendarDate,
-  //       reminder: reminderData,
-  //       notes: notesData,
-  //       time: formatTime(selectedTime),
-  //     };
-  
-  //     await remindersRef.doc(editingReminder.id).update(updatedReminder);
-  
-  //     setSubmittedData(
-  //       submittedData.map((item) =>
-  //         item.id === editingReminder.id
-  //           ? { ...updatedReminder, id: editingReminder.id }
-  //           : item
-  //       )
-  //     );
-  
-  //     setEditingReminder(null);
-  //     setShowPopup(false);
-  //   } catch (error) {
-  //     console.error("Error updating reminder: ", error);
-  //   }
-  // };  
+  const sendAlarmToESP32 = async () => {
+    try {
+      // Perform validation for HH:mm format
+      const timeRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(selectedTime.toLocaleTimeString())) {
+        throw new Error('Invalid time format. Please use HH:mm format.');
+      }
 
-  // const formatTime = (time) => {
-  //   const hours = time.getHours().toString().padStart(2, '0');
-  //   const minutes = time.getMinutes().toString().padStart(2, '0');
-  //   return `${hours}:${minutes}`;
-  // };    
-
+      const response = await axios.post('http://192.168.43.25/alarm', {
+        time: selectedTime.toLocaleTimeString()
+      });
+      if (response.status === 200) {
+        Alert.alert('Success', response.data, [{ text: 'OK' }]);
+      } else {
+        throw new Error(`Failed to set alarm: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error setting alarm:', error);
+      Alert.alert('Error', error.message, [{ text: 'OK' }]);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
