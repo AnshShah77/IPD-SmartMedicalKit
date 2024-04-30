@@ -128,6 +128,7 @@ export default function MedicalReminders() {
     setSelectedTime(time);
     scheduleAlarm(time);
     hideDatePicker();
+    sendAlarmToESP32();
     console.log(time);
   };
 
@@ -164,8 +165,6 @@ export default function MedicalReminders() {
       const notificationId = await scheduleNotification();
       console.log('Notification scheduled with id:', notificationId);
 
-      // Send selected alarm time to ESP32
-      sendAlarmToESP32();
     } catch (error) {
       console.error('Error playing alarm sound:', error);
     }
