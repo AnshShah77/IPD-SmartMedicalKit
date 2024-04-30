@@ -39,6 +39,26 @@ export default function MedicalReminders() {
   const [selectedTime, setSelectedTime] = useState(null);
   const [submittedData, setSubmittedData] = useState([]);
   const [alarmSound, setAlarmSound] = useState(null);
+  const [editingReminder, setEditingReminder] = useState(null);
+
+  useEffect(() => {
+    // Fetch reminder data from Firebase based on selectedDate
+    if (selectedDate) {
+      fetchReminders(selectedDate);
+    }
+  }, [selectedDate]);
+
+  // Function to fetch reminders from Firebase based on date
+  const fetchReminders = async (date) => {
+    try {
+      const remindersRef = firestore.collection("reminders");
+      const snapshot = await remindersRef.where('date', '==', date).get();
+      const data = snapshot.docs.map(doc => doc.data());
+      setSubmittedData(data);
+    } catch (error) {
+      console.error("Error fetching reminders: ", error);
+    }
+  };
 
   useEffect(() => {
     const requestPermission = async() => {
@@ -75,7 +95,6 @@ export default function MedicalReminders() {
     }
   };
   
-
   const onDayPress = (day) => {
     setSelectedDate(day.dateString);
   };
@@ -165,28 +184,17 @@ export default function MedicalReminders() {
     }
   };
   
-  // const dismissAlarm = async () => {
-  //   try {
-  //     if(alarmSound) {
-  //       await alarmSound.stopAsync();
-  //       await alarmSound.unloadAsync();
-  //       setAlarmSound(null);
-  //     }
-  //   } catch(error) {
-  //     console.error('Error dismissing alarm sound:', error);
-  //   }
-  // };
-
-  const dismissAlarm = async (sound) => {
+  const dismissAlarm = async () => {
     try {
-      if (sound) {
-        await sound.stopAsync();
-        await sound.unloadAsync();
+      if(alarmSound) {
+        await alarmSound.stopAsync();
+        await alarmSound.unloadAsync();
+        setAlarmSound(null);
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Error dismissing alarm sound:', error);
     }
-  };  
+  };
 
   const handleSubmitForm = async () => {
     if(!calendarDate || !reminderData || !notesData) {
@@ -226,12 +234,66 @@ export default function MedicalReminders() {
     }
   };
 
-  // const handleEditReminderScreen = () => {
-  //   navigation.navigate('EditReminderScreen', { dismissAlarmFunction: dismissAlarm });
-  // };
-  const handleEditReminderScreen = () => {
-    navigation.navigate('EditReminderScreen', { dismissAlarmFunction: dismissAlarm, alarmSound: alarmSound });
-  };  
+//   const handleEditReminder = (reminder) => {
+//     setEditingReminder(reminder);
+//     setReminderData(reminder.reminder);
+//     setNotesData(reminder.notes);
+  
+//     const timeParts = reminder.time.split(':');
+//     const selectedTime = new Date();
+//     selectedTime.setHours(parseInt(timeParts[0], 10));
+//     selectedTime.setMinutes(parseInt(timeParts[1], 10));
+  
+//     setSelectedTime(selectedTime);
+//     setDatePickerVisible(true);
+//     setShowPopup(true);
+// };
+
+
+  const handleDeleteReminder = async (reminder) => {
+    try {
+      const remindersRef = firestore.collection("reminders");
+      await remindersRef.doc(reminder.id).delete();
+
+      setSubmittedData((prevData) => prevData.filter((item) => item.id !== reminder.id));
+    } catch (error) {
+      console.error("Error deleting reminder: ", error);
+    }
+  };
+
+  // const handleUpdateReminder = async () => {
+  //   try {
+  //     const remindersRef = firestore.collection("reminders");
+  //     const updatedReminder = {
+  //       date: calendarDate,
+  //       reminder: reminderData,
+  //       notes: notesData,
+  //       time: formatTime(selectedTime),
+  //     };
+  
+  //     await remindersRef.doc(editingReminder.id).update(updatedReminder);
+  
+  //     setSubmittedData(
+  //       submittedData.map((item) =>
+  //         item.id === editingReminder.id
+  //           ? { ...updatedReminder, id: editingReminder.id }
+  //           : item
+  //       )
+  //     );
+  
+  //     setEditingReminder(null);
+  //     setShowPopup(false);
+  //   } catch (error) {
+  //     console.error("Error updating reminder: ", error);
+  //   }
+  // };  
+
+  // const formatTime = (time) => {
+  //   const hours = time.getHours().toString().padStart(2, '0');
+  //   const minutes = time.getMinutes().toString().padStart(2, '0');
+  //   return `${hours}:${minutes}`;
+  // };    
+
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -256,39 +318,46 @@ export default function MedicalReminders() {
           <View>
             {submittedData && submittedData.length > 0 ? (
               <View>
-                <Text className="mt-4 text-black font-extrabold text-lg">Your Reminders:</Text>
-                <TouchableOpacity onPress={handleEditReminderScreen} className="mb-4">
+                <Text style={{ marginTop: 10, fontSize: 18, fontWeight: 'bold', color: 'black' }}>Your Reminders:</Text>
                   <View className="mb-40 ml-2">
                     {submittedData.map((dateData, index) => (
-                      <View key={index}>
+                      <View key={index} style={styles.reminderContainer}>
                         <Text className="text-black text-md font-semibold mt-4">Reminders for {dateData.date}:</Text>
                         <View style={styles.submittedDataContainer}>
                           {dateData.reminders.map((data, reminderIndex) => (
-                            <View key={reminderIndex}>
+                            <View key={reminderIndex} style={styles.reminderItem}>
                               <Text style={styles.submittedData}>Reminder: {data.reminder}</Text>
                               <Text style={styles.submittedData}>Notes: {data.notes}</Text>
                               <Text style={styles.submittedData}>Time: {data.time}</Text>
-                              {/* <Button title="Dismiss Alarm" onPress={dismissAlarm} disabled={!alarmSound} /> */}
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <TouchableOpacity
+                                  onPress={dismissAlarm}
+                                  disabled={!alarmSound}
+                                  style={styles.dismiss}
+                                >
+                                  <Text className="text-md font-bold">Dismiss Alarm</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => handleDeleteReminder(data)}
+                                  style={styles.cancel}
+                                >
+                                  <Text className="text-white text-md font-bold">Delete</Text>
+                                </TouchableOpacity>
+                                {/* <Button title="Edit" onPress={() => handleEditReminder(data)} /> */}
+                              </View>
                             </View>
                           ))}
                         </View>
                       </View>
                     ))}
                   </View>
-                </TouchableOpacity>
               </View>
             ) : (
-              <View className="mt-10">
-                <Text className="text-black text-lg font-extrabold text-center">
-                  {selectedDate ? 'No reminders' : 'Select a date to view reminders'}
-                </Text>
-              </View>
+              <Text style={{ marginTop: 10, fontSize: 18, color: 'black' }}>
+                {selectedDate ? 'No reminders' : 'Select a date to view reminders'}
+              </Text>
             )}
           </View>
-
-        </View>
-        <View className="mb-40 ml-6">
-        
         </View>
         <View style={styles.plusContainer}>
           <TouchableOpacity
@@ -340,18 +409,21 @@ export default function MedicalReminders() {
               />
 
               <View className="flex-row justify-center gap-4">
-                <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={handleSubmitForm}
-                >
-                  <Text style={styles.submitButtonText}>Submit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setShowPopup(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: 'green' }]}
+                onPress={editingReminder ? handleUpdateReminder : handleSubmitForm}
+              >
+                <Text style={styles.submitButtonText}>{editingReminder ? 'Update' : 'Submit'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: 'red' }]}
+                onPress={() => {
+                  setEditingReminder(null);
+                  setShowPopup(false);
+                }}
+              >
+                <Text style={styles.submitButtonText}>Cancel</Text>
+              </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -460,8 +532,37 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderRadius: 8,
   },
+  reminderItem: {
+    marginBottom: 10,
+  },
   submittedData: {
     paddingLeft: 10,
     marginBottom: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'blue',
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: 'white',
+  },
+  dismiss: {
+    backgroundColor: '#39B68D',
+    padding: 5,
+    marginRight: 20,
+    borderRadius: 10,
+  },
+  cancel: {
+    backgroundColor: 'black',
+    padding: 5,
+    marginLeft: 20,
+    borderRadius: 10,
   }
 });

@@ -1,20 +1,37 @@
-import { Login, Welcome, Signup, Home, MedicalRecords } from "./screens";
+import { Login, Welcome, Signup, Home } from "./screens";
 import Profile from "./screens/Profile";
 import { firebase,firestore } from "./config";
 import { useEffect, useState } from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import ForgotPassword from "./screens/ForgotPassword";
 import MedicalReminders from "./screens/MedicalReminders";
 import LocationTracking from "./screens/LocationTracking";
 import Sos from "./screens/Sos";
-import EditReminderScreen from "./screens/EditReminderScreen";
+import BMICalculatorScreen from "./screens/BMICalculatorScreen";
+import * as Updates from 'expo-updates';
 
 const Stack = createNativeStackNavigator();
 
 function App() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState(null);
+
+  async function onFetchUpdateAsync() {
+    try {
+      const update = await Updates.checkForUpdateAsync();
+
+      if(update.isAvailable) {
+        await Updates.fetchUpdateAsync();
+        await Updates.reloadAsync();
+      }
+    } catch (error) {
+      console.log(`Error fetching latest expo update: ${error}`);
+    }
+  }
+
+  useEffect(() => {
+    onFetchUpdateAsync()
+  }, [])
 
   function onAuthStateChanged(user) {
     setUser(user);
@@ -54,13 +71,6 @@ function App() {
                 headerShown: false,
               }}
             />
-            <Stack.Screen
-              name="ForgotPassword"
-              component={ForgotPassword}
-              options={{
-                headerShown: false,
-              }}
-            />
           </>
         ) : (
           <Stack.Screen
@@ -78,23 +88,9 @@ function App() {
             headerShown: false,
           }}
         />
-        <Stack.Screen 
-          name="MedicalRecords"
-          component={MedicalRecords}
-          options={{
-            headerShown: false
-          }}
-        />
         <Stack.Screen
           name="MedicalReminders"
           component={MedicalReminders}
-          options={{
-            headerShown: false
-          }}
-        />
-        <Stack.Screen
-          name="EditReminderScreen"
-          component={EditReminderScreen}
           options={{
             headerShown: false
           }}
@@ -109,6 +105,13 @@ function App() {
         <Stack.Screen
           name="SOS"
           component={Sos}
+          options={{
+            headerShown: false
+          }}
+        />
+        <Stack.Screen
+          name="BMICalculator"
+          component={BMICalculatorScreen}
           options={{
             headerShown: false
           }}

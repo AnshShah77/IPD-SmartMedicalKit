@@ -46,7 +46,8 @@ const Signup = ({ navigation }) => {
             userType === "elderly" ? generateConfirmationCode() : null,
         });
 
-      navigation.navigate("Home", { firstName: firstName });
+      // navigation.navigate("Home", { firstName: firstName }, "LocationTracking", { userType: userType });
+      navigation.navigate("Home", { firstName: firstName, userType: userType });
     } catch (error) {
       console.error("Error during sign-up:", error);
       alert(error.message);
@@ -92,7 +93,7 @@ const Signup = ({ navigation }) => {
               email: user.email,
               userId: user.uid,
               userType: userType,
-              confirmationCode: null, // Assuming guardians don't have confirmation codes
+              confirmationCode: confirmationCode, // Assuming guardians don't have confirmation codes
             });
 
           guardianUserId = user.uid;
@@ -108,8 +109,10 @@ const Signup = ({ navigation }) => {
           timestamp: serverTimestamp(), // Use serverTimestamp here
         });
 
+        await AsyncStorage.setItem('confirmationCode', confirmationCode);
+
         navigation.navigate('Home');
-        console.log("Connected to user with userId:", elderlyUserId);
+        alert("Connected to user with userId:", elderlyUserId);
       } else {
         alert("Invalid confirmation code");
       }
@@ -126,11 +129,6 @@ const Signup = ({ navigation }) => {
   };
 
   return (
-    <ScrollView
-    contentContainerStyle={{ flexGrow: 1 }}
-    keyboardShouldPersistTaps= "handled"
-  >
-
     <LinearGradient
       style={{ flex: 1, backgroundColor: "#007260" }}
       colors={["#007260", "#39B68D"]}
@@ -222,9 +220,10 @@ const Signup = ({ navigation }) => {
                   style={[
                     styles.radioButton,
                     userType === "elderly" && styles.selectedRadioButton,
+                    userType === null && styles.unselectedRadioButton,
                   ]}
                 >
-                  <Text style={styles.radioText}>Elderly</Text>
+                  <Text style={[styles.radioText, userType === "elderly" && styles.selectedRadioText]}>Elderly</Text>
                 </View>
               </TouchableOpacity>
 
@@ -233,9 +232,10 @@ const Signup = ({ navigation }) => {
                   style={[
                     styles.radioButton,
                     userType === "guardian" && styles.selectedRadioButton,
+                    userType === null && styles.unselectedRadioButton,
                   ]}
                 >
-                  <Text style={styles.radioText}>Guardian</Text>
+                  <Text style={[styles.radioText, userType === "guardian" && styles.selectedRadioText]}>Guardian</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -276,31 +276,6 @@ const Signup = ({ navigation }) => {
                 {userType === "elderly" ? "Signup" : "Connect"}
               </Text>
             </TouchableOpacity>
-            {/* <TouchableOpacity
-  className="py-3 bg-black rounded-lg"
-  onPress={handleSignUp}
->
-  <Text className="text-lg text-white text-center font-extrabold">
-    {userType === "elderly" ? "Signup" : "Connect"}
-  </Text>
-</TouchableOpacity> */}
-
-            <View style={styles.separator}>
-              <View style={styles.line}></View>
-              <Text style={styles.orText}>Or</Text>
-              <View style={styles.line}></View>
-            </View>
-            <TouchableOpacity className="p-2 bg-gray-100 rounded-2xl flex items-center">
-              <View className="flex-row justify-center items-center space-x-3">
-                <Image
-                  source={require("../assets/images/google.png")}
-                  className="w-10 h-10"
-                />
-                <Text className="text-black text-lg ml-2">
-                  Sign In With Google
-                </Text>
-              </View>
-            </TouchableOpacity>
             <View className="flex-row justify-center mt-7">
               <Text className="text-gray-500 font-semibold">
                 Already have an account?
@@ -313,8 +288,6 @@ const Signup = ({ navigation }) => {
         </View>
       </ScrollView>
     </LinearGradient>
-    </ScrollView>
-
   );
 };
 
@@ -336,20 +309,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   radioContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   radioButton: {
-    borderWidth: 1,
-    borderColor: "black",
     padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'black',
+    backgroundColor: 'black',
   },
   selectedRadioButton: {
-    backgroundColor: "black",
-    color: "white",
+    backgroundColor: 'white',
+  },
+  unselectedRadioButton: {
+    backgroundColor: 'black',
   },
   radioText: {
-    color: "black",
+    color: 'white',
+  },
+  selectedRadioText: {
+    color: 'black',
   },
 });
 

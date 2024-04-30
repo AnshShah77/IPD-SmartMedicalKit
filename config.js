@@ -4,16 +4,13 @@ import 'firebase/compat/firestore';
 import 'firebase/compat/functions';
  
 const firebaseConfig = {
-    apiKey: "AIzaSyDmWccuvCDUpWhXljxnEG7AuvACiN1DOz8",
-    authDomain: "ipd-smartkit.firebaseapp.com",
-    projectId: "ipd-smartkit",
-    storageBucket: "ipd-smartkit.appspot.com",
-    messagingSenderId: "793710137391",
-    appId: "1:793710137391:web:7aaff9353d0c075bfa36da",
-    measurementId: "G-NV371BMQR4"
+  apiKey: "AIzaSyAPCCaGq6jbbKbTv37NdVl-NpxyjQS11Tg",
+  authDomain: "everguardiann-7afa9.firebaseapp.com",
+  projectId: "everguardiann-7afa9",
+  storageBucket: "everguardiann-7afa9.appspot.com",
+  messagingSenderId: "704548573956",
+  appId: "1:704548573956:web:5a46d754fcc5c87466f651"
 };
-
-// Initialize Firebase
 let app;
 if (!firebase.apps.length) {
     app = firebase.initializeApp(firebaseConfig);
@@ -22,10 +19,12 @@ if (!firebase.apps.length) {
 }
 
 const auth = firebase.auth();
-const firestore = firebase.firestore(); // Include Firestore initialization
+const firestore = firebase.firestore();
+const { serverTimestamp } = firebase.firestore; 
 
 export {
     firebase,
     auth,
     firestore,
+    serverTimestamp,
 };

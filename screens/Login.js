@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeftIcon } from 'react-native-heroicons/solid';
 import { auth } from '../config';
-import * as MailComposer from 'expo-mail-composer';
+// import * as MailComposer from 'expo-mail-composer';
 
 const Login = () => {
   const navigation = useNavigation();
@@ -19,27 +19,16 @@ const Login = () => {
   const handleLoginButton = async () => {
     try {
       const userCredentials = await auth.signInWithEmailAndPassword(email, password);
-      sendWelcomeEmail(email);
       navigation.navigate('Home');
     } catch (error) {
-      console.error('Login failed:', error);
+      if (error.code === 'auth/invalid-credential') {
+        // Alert.alert('Incorrect password. Login Failed!!');
+      } else {
+        console.error('Login failed: ', error);
+      }
     }
   };
 
-  const sendWelcomeEmail = (userEmail) => {
-    const message = {
-      subject: 'Welcome to Your App!',
-      body: 'Thank you for logging in. Enjoy using our app!',
-      isHtml: false,
-      recipients: [userEmail],
-    };
-
-    MailComposer.composeAsync(message);
-  };
-
-  const handleForgotPassword = () => {
-    navigation.navigate('ForgotPassword')
-  }
   return (
     <LinearGradient className="flex-1 bg-white" colors={['#007260', '#39B68D']}>
       <SafeAreaView className="flex">
@@ -78,27 +67,11 @@ const Login = () => {
             placeholder='Password'
             onChangeText={(text) => setPassword(text)}
           />
-          <TouchableOpacity 
-            onPress={handleForgotPassword}
-            className="flex items-end">
-            <Text className="text-black mb-5">Forgot Password?</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             className="py-3 bg-black rounded-lg"
             onPress={handleLoginButton}
           >
             <Text className="text-lg text-white text-center font-extrabold">Login</Text>
-          </TouchableOpacity>
-          <View style={styles.separator}>
-            <View style={styles.line}></View>
-            <Text style={styles.orText}>Or</Text>
-            <View style={styles.line}></View>
-          </View>
-          <TouchableOpacity className="p-2 bg-gray-100 rounded-2xl flex items-center">
-            <View className="flex-row justify-center items-center space-x-3">
-              <Image source={require('../assets/images/google.png')} className="w-10 h-10" />
-              <Text className="text-black text-lg ml-2">Login In With Google</Text>
-            </View>
           </TouchableOpacity>
           <View className="flex-row justify-center mt-7">
             <Text className="text-gray-500 font-semibold">
