@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Button,
+  Platform,
   Alert,
 } from 'react-native';
 import { ArrowLeftIcon } from "react-native-heroicons/solid";
@@ -536,7 +537,7 @@ const styles = StyleSheet.create({
     marginRight: 20,
     borderRadius: 10,
   },
-  cancel: {
+  cancel: { 
     backgroundColor: 'black',
     padding: 5,
     marginLeft: 20,
